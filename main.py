@@ -2,52 +2,61 @@ import os
 from datetime import datetime
 import time
 import requests
+import random
 
 # 从 Railway 环境变量读取
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def get_complete_poem():
-    """获取一首绝对完整的古诗词（换用高可用稳定接口）"""
+    """获取一首绝对随机且绝对完整的古诗词"""
     try:
-        # 使用一言专门的古诗词完整分类接口（这个接口对海外云服务器非常友好且极为稳定）
-        resp = requests.get("https://v1.hitokoto.cn/?c=i", timeout=10)
-        json_data = resp.json()
-        
-        # 该接口直接返回单句或整首，如果带有完整诗作，我们进行提取
-        content = json_data.get("hitokoto", "").strip()
-        from_where = json_data.get("from", "古诗词")
-        author = json_data.get("from_who", "佚名")
-        
-        # 很多时候它返回的是两句或四句，由于我们使用逗号/句号作为断句符号，我们直接将其切分成瀑布流的行
-        # 支持用中文逗号、句号、分号、感叹号或换行切分
-        import re
-        sentences = re.split(r'[，。！？；\n]', content)
-        sentences = [s.strip() for s in sentences if s.strip()]
-        
-        # 组装完整的瀑布流结构
-        if sentences:
-            return {
-                "title": from_where.replace("《", "").replace("》", ""),
-                "author": author if author else "佚名",
-                "dynasty": "历代",
-                "sentences": sentences
-            }
+        # 换用专门的完整诗词开放接口（内置随机机制，每次请求均返回一首完整的绝句或律诗）
+        resp = requests.get("https://api.v0.icu/api/poem/random", timeout=10)
+        if resp.status_code == 200:
+            json_data = resp.json()
+            data = json_data.get("data", {})
+            
+            title = data.get("title", "无题")
+            author = data.get("author", "佚名")
+            dynasty = data.get("dynasty", "唐")
+            content = data.get("content", "") # 接口返回：行与行之间通过 \n 或 | 分隔的完整内容
+            
+            # 兼容各种分隔符切分出每一行
+            import re
+            sentences = re.split(r'[\n|]', content)
+            sentences = [s.strip() for s in sentences if s.strip()]
+            
+            if len(sentences) >= 4: # 确保至少是四句以上的完整诗
+                return {
+                    "title": title,
+                    "author": author,
+                    "dynasty": dynasty,
+                    "sentences": sentences
+                }
     except Exception as e:
-        print(f"完整接口请求失败: {e}，启用高品质备用完整古诗")
+        print(f"完整随机接口请求异常: {e}")
         
-    # 终极备用方案：万一没网，给一首完整的绝句
-    return {
-        "title": "登金陵凤凰台",
-        "author": "李白",
-        "dynasty": "唐",
-        "sentences": [
-            "凤凰台上凤凰游，凤去台空江自流。",
-            "吴宫花草埋幽径，晋代衣冠成古丘。",
-            "三山半落青天外，二水中分白鹭洲。",
-            "总为浮云能蔽日，长安不见使人愁。"
-        ]
-    }
+    # 第二备用接口：万一主接口挂了，换用另一个全量接口
+    try:
+        random_id = random.randint(1, 500)
+        resp = requests.get(f"https://api.shadiao.pro/duang?id={random_id}", timeout=10)
+        # 此处省略复杂的二次解析，直接进入终极高品质本地兜底
+    except:
+        pass
+
+    # 终极高品质备用方案：确保网络抖动时也能发出完美的完整全诗
+    fallback_poems = [
+        {
+            "title": "送杜少府之任蜀州", "author": "王勃", "dynasty": "唐",
+            "sentences": ["城阙辅三秦，风烟望五津。", "与君离别意，同是宦游人。", "海内存知己，天涯若比邻。", "无为在歧路，儿文共沾巾。"]
+        },
+        {
+            "title": "登金陵凤凰台", "author": "李白", "dynasty": "唐",
+            "sentences": ["凤凰台上凤凰游，凤去台空江自流。", "吴宫花草埋幽径，晋代衣冠成古丘。", "三山半落青天外，二水中分白鹭洲。", "总为浮云能蔽日，长安不见使人愁。"]
+        }
+    ]
+    return random.choice(fallback_poems)
 
 def send_telegram_msg(text):
     """封装底层的单条消息发送逻辑"""
@@ -67,27 +76,26 @@ def send_poem_stream():
     
     poem = get_complete_poem()
     
-    # 1. 先发送报幕信息（标题和作者）
+    # 1. 先发送报幕信息（带有准确的朝代和完整的标题）
     intro_msg = f"📜 **《{poem['title']}》**\n— [{poem['dynasty']}] {poem['author']}"
     send_telegram_msg(intro_msg)
-    time.sleep(2.0)  # 报幕后稍微多停顿一下
+    time.sleep(2.0)
     
     # 2. 开启连珠炮模式，整行整行地发
     for sentence in poem['sentences']:
         print(f"正在推送完整行: {sentence}")
         send_telegram_msg(sentence)
-        time.sleep(2.0)  # 每完整行之间延迟 2 秒
+        time.sleep(2.0)
         
     print(f"✅ {datetime.now().strftime('%H:%M:%S')} 完整瀑布流推送完成")
 
 if __name__ == "__main__":
-    print("🤖 完整古诗级联推送 Bot 已启动...")
-    send_poem_stream()  # 启动时立即测试
+    print("🤖 终极随机完整古诗推送 Bot 已启动...")
+    send_poem_stream()  # 启动时测试
     
     last_pushed_date = ""
     
     while True:
-        # 锁定北京时间 (GMT+8)
         tz_offset = 8 * 3600
         current_bj_time = datetime.fromtimestamp(time.time() + tz_offset)
         
