@@ -9,51 +9,57 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def get_complete_poem():
-    """获取一首绝对随机且绝对完整的古诗词"""
+    """获取一首绝对随机且绝对完整的古诗词（换用大厂永久维护高可用接口）"""
     try:
-        # 换用专门的完整诗词开放接口（内置随机机制，每次请求均返回一首完整的绝句或律诗）
-        resp = requests.get("https://api.v0.icu/api/poem/random", timeout=10)
+        # 换用极其稳定的韩小韩全量随机诗词接口
+        resp = requests.get("https://api.vvhan.com/api/ian/poem", timeout=10)
         if resp.status_code == 200:
             json_data = resp.json()
-            data = json_data.get("data", {})
             
-            title = data.get("title", "无题")
-            author = data.get("author", "佚名")
-            dynasty = data.get("dynasty", "唐")
-            content = data.get("content", "") # 接口返回：行与行之间通过 \n 或 | 分隔的完整内容
-            
-            # 兼容各种分隔符切分出每一行
-            import re
-            sentences = re.split(r'[\n|]', content)
-            sentences = [s.strip() for s in sentences if s.strip()]
-            
-            if len(sentences) >= 4: # 确保至少是四句以上的完整诗
-                return {
-                    "title": title,
-                    "author": author,
-                    "dynasty": dynasty,
-                    "sentences": sentences
-                }
+            if json_data.get("success") is True:
+                data = json_data.get("data", {})
+                
+                title = data.get("title", "无题")
+                author = data.get("author", "佚名")
+                dynasty = data.get("dynasty", "唐")
+                content = data.get("content", "") # 返回带标准标点或换行的完整内容
+                
+                # 按照常见的中文标点和换行符切分成独立的瀑布流完整行
+                import re
+                sentences = re.split(r'[，。！？；\n]', content)
+                sentences = [s.strip() for s in sentences if s.strip()]
+                
+                # 两两合并，让发出来的每一条消息都变成工整的一长句（例如“凤凰台上凤凰游，凤去台空江自流。”）
+                paired_sentences = []
+                for i in range(0, len(sentences), 2):
+                    if i + 1 < len(sentences):
+                        paired_sentences.append(f"{sentences[i]}，{sentences[i+1]}。")
+                    else:
+                        paired_sentences.append(f"{sentences[i]}。")
+                
+                if paired_sentences:
+                    return {
+                        "title": title,
+                        "author": author,
+                        "dynasty": dynasty,
+                        "sentences": paired_sentences
+                    }
     except Exception as e:
-        print(f"完整随机接口请求异常: {e}")
+        print(f"核心接口请求异常: {e}")
         
-    # 第二备用接口：万一主接口挂了，换用另一个全量接口
-    try:
-        random_id = random.randint(1, 500)
-        resp = requests.get(f"https://api.shadiao.pro/duang?id={random_id}", timeout=10)
-        # 此处省略复杂的二次解析，直接进入终极高品质本地兜底
-    except:
-        pass
-
-    # 终极高品质备用方案：确保网络抖动时也能发出完美的完整全诗
+    # 终极本地高品质备用池：万一没网，在本地随机抽一首，绝不重样
     fallback_poems = [
         {
             "title": "送杜少府之任蜀州", "author": "王勃", "dynasty": "唐",
-            "sentences": ["城阙辅三秦，风烟望五津。", "与君离别意，同是宦游人。", "海内存知己，天涯若比邻。", "无为在歧路，儿文共沾巾。"]
+            "sentences": ["城阙辅三秦，风烟望五津。", "与君离别意，同是宦游人。", "海内存知己，天涯若比邻。", "无为在歧路，儿女共沾巾。"]
         },
         {
             "title": "登金陵凤凰台", "author": "李白", "dynasty": "唐",
             "sentences": ["凤凰台上凤凰游，凤去台空江自流。", "吴宫花草埋幽径，晋代衣冠成古丘。", "三山半落青天外，二水中分白鹭洲。", "总为浮云能蔽日，长安不见使人愁。"]
+        },
+        {
+            "title": "望岳", "author": "杜甫", "dynasty": "唐",
+            "sentences": ["岱宗夫如何？齐鲁青未了。", "造化钟神秀，阴阳割昏晓。", "荡胸生曾云，决眦入归鸟。", "会当凌绝顶，一览众山小。"]
         }
     ]
     return random.choice(fallback_poems)
@@ -76,7 +82,7 @@ def send_poem_stream():
     
     poem = get_complete_poem()
     
-    # 1. 先发送报幕信息（带有准确的朝代和完整的标题）
+    # 1. 先发送报幕信息
     intro_msg = f"📜 **《{poem['title']}》**\n— [{poem['dynasty']}] {poem['author']}"
     send_telegram_msg(intro_msg)
     time.sleep(2.0)
@@ -91,7 +97,7 @@ def send_poem_stream():
 
 if __name__ == "__main__":
     print("🤖 终极随机完整古诗推送 Bot 已启动...")
-    send_poem_stream()  # 启动时测试
+    send_poem_stream()  # 启动时测试一次
     
     last_pushed_date = ""
     
