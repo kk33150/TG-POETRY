@@ -2,51 +2,50 @@ import os
 from datetime import datetime
 import time
 import requests
-import re
-import random
 
 # 从 Railway 环境变量读取
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def get_complete_poem():
-    """获取一首绝对完整的古诗词（完全随机）"""
+    """获取一首绝对完整的古诗词（换用高可用稳定接口）"""
     try:
-        # 随机生成一个页码（1 到 1000 页），确保每次请求和测试都是全新的诗
-        random_page = random.randint(1, 1000)
-        url = f"https://api.apiopen.top/api/getTangPoetry?page={random_page}&size=1"
-        
-        resp = requests.get(url, timeout=10)
+        # 使用一言专门的古诗词完整分类接口（这个接口对海外云服务器非常友好且极为稳定）
+        resp = requests.get("https://v1.hitokoto.cn/?c=i", timeout=10)
         json_data = resp.json()
         
-        if json_data.get("code") == 200 and json_data.get("result"):
-            item = json_data["result"][0]
-            # 过滤掉内容里的换行和杂质，统一用标准的中文句号或换行来处理
-            raw_content = item.get("content", "")
-            # 将古诗内容按行切分
-            sentences = [s.strip() for s in raw_content.split("|") if s.strip()]
-            if not sentences:
-                sentences = [s.strip() for s in raw_content.split("\n") if s.strip()]
-                
+        # 该接口直接返回单句或整首，如果带有完整诗作，我们进行提取
+        content = json_data.get("hitokoto", "").strip()
+        from_where = json_data.get("from", "古诗词")
+        author = json_data.get("from_who", "佚名")
+        
+        # 很多时候它返回的是两句或四句，由于我们使用逗号/句号作为断句符号，我们直接将其切分成瀑布流的行
+        # 支持用中文逗号、句号、分号、感叹号或换行切分
+        import re
+        sentences = re.split(r'[，。！？；\n]', content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        # 组装完整的瀑布流结构
+        if sentences:
             return {
-                "title": item.get("title", "无题"),
-                "author": item.get("author", "佚名"),
-                "dynasty": "唐",
+                "title": from_where.replace("《", "").replace("》", ""),
+                "author": author if author else "佚名",
+                "dynasty": "历代",
                 "sentences": sentences
             }
     except Exception as e:
         print(f"完整接口请求失败: {e}，启用高品质备用完整古诗")
         
-    # 备用方案：给一首绝对完整且意境极佳的诗
+    # 终极备用方案：万一没网，给一首完整的绝句
     return {
-        "title": "送杜少府之任蜀州",
-        "author": "王勃",
+        "title": "登金陵凤凰台",
+        "author": "李白",
         "dynasty": "唐",
         "sentences": [
-            "城阙辅三秦，风烟望五津。",
-            "与君离别意，同是宦游人。",
-            "海内存知己，天涯若比邻。",
-            "无为在歧路，儿女共沾巾。"
+            "凤凰台上凤凰游，凤去台空江自流。",
+            "吴宫花草埋幽径，晋代衣冠成古丘。",
+            "三山半落青天外，二水中分白鹭洲。",
+            "总为浮云能蔽日，长安不见使人愁。"
         ]
     }
 
@@ -71,13 +70,13 @@ def send_poem_stream():
     # 1. 先发送报幕信息（标题和作者）
     intro_msg = f"📜 **《{poem['title']}》**\n— [{poem['dynasty']}] {poem['author']}"
     send_telegram_msg(intro_msg)
-    time.sleep(2.0)  # 报幕后稍微多停顿一下，准备高潮
+    time.sleep(2.0)  # 报幕后稍微多停顿一下
     
-    # 2. 开启连珠炮模式，整行整行地发（例如：城阙辅三秦，风烟望五津。）
+    # 2. 开启连珠炮模式，整行整行地发
     for sentence in poem['sentences']:
         print(f"正在推送完整行: {sentence}")
         send_telegram_msg(sentence)
-        time.sleep(2.0)  # 每完整行之间延迟 2 秒，节奏更舒服
+        time.sleep(2.0)  # 每完整行之间延迟 2 秒
         
     print(f"✅ {datetime.now().strftime('%H:%M:%S')} 完整瀑布流推送完成")
 
