@@ -2,16 +2,21 @@ import os
 from datetime import datetime
 import time
 import requests
+import re
+import random
 
 # 从 Railway 环境变量读取
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def get_complete_poem():
-    """获取一首绝对完整的古诗词"""
+    """获取一首绝对完整的古诗词（完全随机）"""
     try:
-        # 换用官方全量诗词古籍接口，保证返回完整作品
-        resp = requests.get("https://api.apiopen.top/api/getTangPoetry?page=1&size=1", timeout=10)
+        # 随机生成一个页码（1 到 1000 页），确保每次请求和测试都是全新的诗
+        random_page = random.randint(1, 1000)
+        url = f"https://api.apiopen.top/api/getTangPoetry?page={random_page}&size=1"
+        
+        resp = requests.get(url, timeout=10)
         json_data = resp.json()
         
         if json_data.get("code") == 200 and json_data.get("result"):
