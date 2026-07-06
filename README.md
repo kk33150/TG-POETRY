@@ -24,20 +24,35 @@
 ├── main.py          # 机器人核心 Python 脚本
 ├── requirements.txt # 依赖配置文件（仅需 requests）
 └── Procfile         # 告诉 Railway 启动常驻 worker 的命令
+```
 
+### `requirements.txt` 内容：
+```text
+requests==2.32.3
+```
 
+### `Procfile` 内容：
+```text
+worker: python main.py
+```
 
-🚀 部署到 Railway.app
-​将代码（main.py、requirements.txt、Procfile）提交并推送到你的 GitHub 私有仓库。
-​登录 Railway.app，点击 + New Project。
-​选择 Deploy from GitHub repo，并授权导入你刚才创建的古诗 Bot 仓库。
-​添加环境变量（最关键的一步）：
-在 Railway 部署界面进入该项目，点击 Variables 标签页，添加以下两个环境变量：
-​BOT_TOKEN : 填入你的 Telegram Bot Token
-​CHAT_ID : 填入你的 Telegram Chat ID
-​保存变量后，Railway 会自动触发重新部署（Redeploy）。
-​🧪 如何测试
-​云端热启动测试：为了方便测试，代码中设计了“启动即触发”机制。每当你向 GitHub 提交代码或者 Railway 重新启动服务时，机器人会立刻向你的 Telegram 推送一首完整的古诗。如果你收到连发弹窗，说明配置完全成功！
-​定时验证：测试通过后，保持 Railway 状态为 Active，它就会每天在北京时间早上 08:00 准时为你“轰炸”推送古诗。
-​📝 许可证
-​MIT License
+## 🚀 部署到 Railway.app
+
+1. 将代码（`main.py`、`requirements.txt`、`Procfile`）提交并推送到你的 **GitHub 私有仓库**。
+2. 登录 [Railway.app](https://railway.app/)，点击 **+ New Project**。
+3. 选择 **Deploy from GitHub repo**，并授权导入你刚才创建的古诗 Bot 仓库。
+4. **添加环境变量（最关键的一步）**：
+   在 Railway 部署界面进入该项目，点击 **Variables** 标签页，添加以下两个环境变量：
+   - `BOT_TOKEN` : 填入你的 Telegram Bot Token
+   - `CHAT_ID` : 填入你的 Telegram Chat ID
+5. 保存变量后，Railway 会自动触发重新部署（Redeploy）。
+
+## 🧪 如何测试
+
+- **云端热启动测试**：为了方便测试，代码中设计了“启动即触发”机制。每当你向 GitHub 提交代码或者 Railway 重新启动服务时，机器人会**立刻**向你的 Telegram 推送一首完整的古诗。如果你收到连发弹窗，说明配置完全成功！
+- **定时验证**：测试通过后，保持 Railway 状态为 `Active`，它就会每天在北京时间早上 `08:00` 准时为你“轰炸”推送古诗。
+
+## 📝 许可证
+
+[MIT License](LICENSE)
+```
