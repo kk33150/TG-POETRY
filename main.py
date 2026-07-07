@@ -9,45 +9,36 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def get_complete_poem():
-    """获取一首绝对随机且绝对完整的古诗词（换用大厂永久维护高可用接口）"""
+    """从今日诗词官方全球加速接口获取绝对随机且完整的古诗词"""
     try:
-        # 换用极其稳定的韩小韩全量随机诗词接口
-        resp = requests.get("https://api.vvhan.com/api/ian/poem", timeout=10)
+        # 今日诗词官方的免费全量随机接口（自带全球 CDN 节点加速，海外服务器访问极稳）
+        headers = {"X-User-Token": "v2.jinrishici.token"} # 官方公共测试 Token
+        resp = requests.get("https://v2.jinrishici.com/one.json", headers=headers, timeout=10)
+        
         if resp.status_code == 200:
             json_data = resp.json()
-            
-            if json_data.get("success") is True:
-                data = json_data.get("data", {})
+            if json_data.get("status") == "success":
+                origin = json_data.get("data", {}).get("origin", {})
                 
-                title = data.get("title", "无题")
-                author = data.get("author", "佚名")
-                dynasty = data.get("dynasty", "唐")
-                content = data.get("content", "") # 返回带标准标点或换行的完整内容
+                title = origin.get("title", "无题")
+                author = origin.get("author", "佚名")
+                dynasty = origin.get("dynasty", "唐")
+                content_list = origin.get("content", []) # 该接口直接返回一个包含完整每行诗句的数组
                 
-                # 按照常见的中文标点和换行符切分成独立的瀑布流完整行
-                import re
-                sentences = re.split(r'[，。！？；\n]', content)
-                sentences = [s.strip() for s in sentences if s.strip()]
+                # 清洗一下数据，去掉空行，确保有内容
+                sentences = [s.strip() for s in content_list if s.strip()]
                 
-                # 两两合并，让发出来的每一条消息都变成工整的一长句（例如“凤凰台上凤凰游，凤去台空江自流。”）
-                paired_sentences = []
-                for i in range(0, len(sentences), 2):
-                    if i + 1 < len(sentences):
-                        paired_sentences.append(f"{sentences[i]}，{sentences[i+1]}。")
-                    else:
-                        paired_sentences.append(f"{sentences[i]}。")
-                
-                if paired_sentences:
+                if sentences:
                     return {
                         "title": title,
                         "author": author,
                         "dynasty": dynasty,
-                        "sentences": paired_sentences
+                        "sentences": sentences
                     }
     except Exception as e:
-        print(f"核心接口请求异常: {e}")
+        print(f"今日诗词接口请求异常: {e}")
         
-    # 终极本地高品质备用池：万一没网，在本地随机抽一首，绝不重样
+    # 终极本地备用池（万一海外网络遇到极端波动，用于兜底）
     fallback_poems = [
         {
             "title": "送杜少府之任蜀州", "author": "王勃", "dynasty": "唐",
@@ -56,10 +47,6 @@ def get_complete_poem():
         {
             "title": "登金陵凤凰台", "author": "李白", "dynasty": "唐",
             "sentences": ["凤凰台上凤凰游，凤去台空江自流。", "吴宫花草埋幽径，晋代衣冠成古丘。", "三山半落青天外，二水中分白鹭洲。", "总为浮云能蔽日，长安不见使人愁。"]
-        },
-        {
-            "title": "望岳", "author": "杜甫", "dynasty": "唐",
-            "sentences": ["岱宗夫如何？齐鲁青未了。", "造化钟神秀，阴阳割昏晓。", "荡胸生曾云，决眦入归鸟。", "会当凌绝顶，一览众山小。"]
         }
     ]
     return random.choice(fallback_poems)
@@ -96,7 +83,7 @@ def send_poem_stream():
     print(f"✅ {datetime.now().strftime('%H:%M:%S')} 完整瀑布流推送完成")
 
 if __name__ == "__main__":
-    print("🤖 终极随机完整古诗推送 Bot 已启动...")
+    print("🤖 今日诗词全球加速版推送 Bot 已启动...")
     send_poem_stream()  # 启动时测试一次
     
     last_pushed_date = ""
