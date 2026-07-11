@@ -3,53 +3,102 @@ from datetime import datetime
 import time
 import requests
 import random
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 从 Railway 环境变量读取
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+# ==================== 赛马接口 1：今日诗词 ====================
+def fetch_jinrishici():
+    headers = {"X-User-Token": "v2.jinrishici.token"}
+    resp = requests.get("https://v2.jinrishici.com/one.json", headers=headers, timeout=4)
+    if resp.status_code == 200 and resp.json().get("status") == "success":
+        origin = resp.json()["data"]["origin"]
+        sentences = [s.strip() for s in origin.get("content", []) if s.strip()]
+        if sentences:
+            return {
+                "title": origin.get("title", "无题"),
+                "author": origin.get("author", "佚名"),
+                "dynasty": origin.get("dynasty", "唐"),
+                "sentences": sentences
+            }
+    raise Exception("今日诗词接口未返回有效数据")
+
+# ==================== 赛马接口 2：韩小韩 API ====================
+def fetch_vvhan():
+    resp = requests.get("https://api.vvhan.com/api/ian/poem", timeout=4)
+    if resp.status_code == 200 and resp.json().get("success") is True:
+        data = resp.json().get("data", {})
+        content = data.get("content", "")
+        sentences = re.split(r'[，。！？；\n]', content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        # 两两合成长句发文，排版更美观
+        paired = []
+        for i in range(0, len(sentences), 2):
+            if i + 1 < len(sentences):
+                paired.append(f"{sentences[i]}，{sentences[i+1]}。")
+            else:
+                paired.append(f"{sentences[i]}。")
+        if paired:
+            return {
+                "title": data.get("title", "无题"),
+                "author": data.get("author", "佚名"),
+                "dynasty": data.get("dynasty", "唐"),
+                "sentences": paired
+            }
+    raise Exception("韩小韩接口未返回有效数据")
+
+# ==================== 赛马接口 3：一言古诗词名句 ====================
+def fetch_hitokoto():
+    resp = requests.get("https://v1.hitokoto.cn/?c=i", timeout=4)
+    if resp.status_code == 200:
+        data = resp.json()
+        content = data.get("hitokoto", "").strip()
+        sentences = re.split(r'[，。！？；\n]', content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if len(sentences) >= 2:  # 至少两句以上才采用
+            return {
+                "title": data.get("from", "古诗词").replace("《", "").replace("》", ""),
+                "author": data.get("from_who", "佚名") or "佚名",
+                "dynasty": "历代",
+                "sentences": sentences
+            }
+    raise Exception("一言接口未返回有效数据")
+
+
 def get_complete_poem():
-    """从今日诗词官方全球加速接口获取绝对随机且完整的古诗词"""
-    try:
-        # 今日诗词官方的免费全量随机接口（自带全球 CDN 节点加速，海外服务器访问极稳）
-        headers = {"X-User-Token": "v2.jinrishici.token"} # 官方公共测试 Token
-        resp = requests.get("https://v2.jinrishici.com/one.json", headers=headers, timeout=10)
+    """多接口并发赛马，谁快用谁"""
+    tasks = [fetch_jinrishici, fetch_vvhan, fetch_hitokoto]
+    
+    # 开启线程池进行并发请求
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(task): task.__name__ for task in tasks}
         
-        if resp.status_code == 200:
-            json_data = resp.json()
-            if json_data.get("status") == "success":
-                origin = json_data.get("data", {}).get("origin", {})
-                
-                title = origin.get("title", "无题")
-                author = origin.get("author", "佚名")
-                dynasty = origin.get("dynasty", "唐")
-                content_list = origin.get("content", []) # 该接口直接返回一个包含完整每行诗句的数组
-                
-                # 清洗一下数据，去掉空行，确保有内容
-                sentences = [s.strip() for s in content_list if s.strip()]
-                
-                if sentences:
-                    return {
-                        "title": title,
-                        "author": author,
-                        "dynasty": dynasty,
-                        "sentences": sentences
-                    }
-    except Exception as e:
-        print(f"今日诗词接口请求异常: {e}")
-        
-    # 终极本地备用池（万一海外网络遇到极端波动，用于兜底）
-    fallback_poems = [
-        {
-            "title": "送杜少府之任蜀州", "author": "王勃", "dynasty": "唐",
-            "sentences": ["城阙辅三秦，风烟望五津。", "与君离别意，同是宦游人。", "海内存知己，天涯若比邻。", "无为在歧路，儿女共沾巾。"]
-        },
-        {
-            "title": "登金陵凤凰台", "author": "李白", "dynasty": "唐",
-            "sentences": ["凤凰台上凤凰游，凤去台空江自流。", "吴宫花草埋幽径，晋代衣冠成古丘。", "三山半落青天外，二水中分白鹭洲。", "总为浮云能蔽日，长安不见使人愁。"]
-        }
+        # 谁先成功返回（as_completed 顺序取决于谁先响应）
+        for future in as_completed(futures):
+            task_name = futures[future]
+            try:
+                result = future.result()
+                if result:
+                    print(f"🚀 赛马成功！胜出接口: {task_name}")
+                    return result
+            except Exception as e:
+                print(f"⚠️ 接口 {task_name} 失败: {e}")
+
+    print("🚨 所有外部接口全军覆没，启动本地大随机池兜底！")
+    # ==================== 终极本地大随机池 ====================
+    fallback_pool = [
+        {"title": "黄鹤楼", "author": "崔颢", "dynasty": "唐", "sentences": ["昔人已乘黄鹤去，此地空余黄鹤楼。", "黄鹤一去不复返，白云千载空悠悠。", "晴川历历汉阳树，芳草萋萋鹦鹉洲。", "日暮乡关何处是？烟波江上使人愁。"]},
+        {"title": "锦瑟", "author": "李商隐", "dynasty": "唐", "sentences": ["锦瑟无端五十弦，一弦一柱思华年。", "庄生晓梦迷蝴蝶，望帝春心托杜鹃。", "沧海月明珠有泪，蓝田日暖玉生烟。", "此情可待成追忆？只是当时已惘然。"]},
+        {"title": "无题", "author": "李商隐", "dynasty": "唐", "sentences": ["相见时难别亦难，东风无力百花残。", "春蚕到死丝方尽，蜡炬成灰泪始干。", "晓镜但愁云鬓改，夜吟应觉月光寒。", "蓬山此去无多路，青鸟殷勤为探看。"]},
+        {"title": "望岳", "author": "杜甫", "dynasty": "唐", "sentences": ["岱宗夫如何？齐鲁青未了。", "造化钟神秀，阴阳割昏晓。", "荡胸生曾云，决眦入归鸟。", "会当凌绝顶，一览众山小。"]},
+        {"title": "登金陵凤凰台", "author": "李白", "dynasty": "唐", "sentences": ["凤凰台上凤凰游，凤去台空江自流。", "吴宫花草埋幽径，晋代衣冠成古丘。", "三山半落青天外，二水中分白鹭洲。", "总为浮云能蔽日，长安不见使人愁。"]},
+        {"title": "送杜少府之任蜀州", "author": "王勃", "dynasty": "唐", "sentences": ["城阙辅三秦，风烟望五津。", "与君离别意，同是宦游人。", "海内存知己，天涯若比邻。", "无为在歧路，儿女共沾巾。"]}
     ]
-    return random.choice(fallback_poems)
+    return random.choice(fallback_pool)
 
 def send_telegram_msg(text):
     """封装底层的单条消息发送逻辑"""
@@ -83,8 +132,8 @@ def send_poem_stream():
     print(f"✅ {datetime.now().strftime('%H:%M:%S')} 完整瀑布流推送完成")
 
 if __name__ == "__main__":
-    print("🤖 今日诗词全球加速版推送 Bot 已启动...")
-    send_poem_stream()  # 启动时测试一次
+    print("🤖 3路并发赛马版古诗推送 Bot 已启动...")
+    send_poem_stream()  # 启动时热启动测试
     
     last_pushed_date = ""
     
@@ -96,7 +145,7 @@ if __name__ == "__main__":
         current_hour = current_bj_time.strftime("%H:%M")
         
         if current_hour == "08:00" and last_pushed_date != current_date:
-            print(f"⏰ 到达目标时间 08:00，开始完整推送...")
+            print(f"⏰ 到达目标时间 08:00，开始并发抓取推送...")
             send_poem_stream()
             last_pushed_date = current_date
             
