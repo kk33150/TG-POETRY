@@ -24,13 +24,13 @@ POEM_POOL = [
     {"title": "酬乐天扬州初逢席上见赠", "author": "刘禹锡", "dynasty": "唐", "sentences": ["巴山楚水凄凉地，二十三年弃置身。", "怀旧空吟闻笛赋，到乡翻似烂柯人。", "沉舟侧畔千帆过，病树前头万木春。", "今日听君歌一曲，暂凭杯酒长精神。"]},
     {"title": "夜雨寄北", "author": "李商隐", "dynasty": "唐", "sentences": ["君问归期未有期，巴山夜雨涨秋池。", "何当共剪西窗烛，却话巴山夜雨时。"]},
     {"title": "清明", "author": "杜牧", "dynasty": "唐", "sentences": ["清明时节雨纷纷，路上行人欲断魂。", "借问酒家何处有？牧童遥指杏花村。"]},
-    {"title": "山行", "author": "杜牧", "dynasty": "唐", "sentences": ["远上寒山石径斜，白云生处有人家。", "停车坐爱枫林晚，霜叶红于二月花。"]},
+    {"title": "山行", "author": "杜牧", "dynasty": "唐", "sentences": ["远上寒山石径斜，白云生处有人家。", "停车坐爱枫林晚，霜叶红于二月花. 。"]},
     {"title": "九月九日忆山东兄弟", "author": "王维", "dynasty": "唐", "sentences": ["独在异乡为异客，每逢佳节倍思亲。", "遥知兄弟登高处，遍插茱萸少一人。"]},
     {"title": "枫桥夜泊", "author": "张继", "dynasty": "唐", "sentences": ["月落乌啼霜满天，江枫渔火对愁眠。", "姑苏城外寒山寺，夜半钟声到客船。"]},
     {"title": "乌衣巷", "author": "刘禹锡", "dynasty": "唐", "sentences": ["朱雀桥边野草花，乌衣巷口夕阳斜。", "旧时王谢堂前燕，飞入寻常百姓家。"]},
     {"title": "江南逢李龟年", "author": "杜甫", "dynasty": "唐", "sentences": ["岐王宅里寻常见，崔九堂前几度闻。", "正是江南好风景，落花时节又逢君。"]},
     {"title": "赠汪伦", "author": "李白", "dynasty": "唐", "sentences": ["李白乘舟将欲行，忽闻岸上踏歌声。", "桃花潭水深千尺，不及汪伦送我情。"]},
-    {"title": "早发白帝城", "author": "李白", "dynasty": "唐", "sentences": ["朝辞白帝彩云间，千里江陵一日还。", "两岸猿声啼不住，轻舟已过万重山. 。"]},
+    {"title": "早发白帝城", "author": "李白", "dynasty": "唐", "sentences": ["朝辞白帝彩云间，千里江陵一日还。", "两岸猿声啼不住，轻舟已过万重山。"]},
     {"title": "望庐山瀑布", "author": "李白", "dynasty": "唐", "sentences": ["日照香炉生紫烟，遥看瀑布挂前川。", "飞流直下三千尺，疑是银河落九天。"]},
     {"title": "望天门山", "author": "李白", "dynasty": "唐", "sentences": ["天门中断楚江开，碧水东流至此回。", "两岸青山相对出，孤帆一片日边来。"]},
     {"title": "黄鹤楼送孟浩然之广陵", "author": "李白", "dynasty": "唐", "sentences": ["故人西辞黄鹤楼，烟花三月下扬州。", "孤帆远影碧空尽，唯见长江天际流。"]},
@@ -48,9 +48,9 @@ POEM_POOL = [
     {"title": "过零丁洋", "author": "文天祥", "dynasty": "宋", "sentences": ["辛苦遭逢起一经，干戈寥落四周星。", "山河破碎风飘絮，身世浮沉雨打萍。", "惶恐滩头说惶恐，零丁洋里叹零丁。", "人生自古谁无死？留取丹心照汗青。"]},
     {"title": "钱塘湖春行", "author": "白居易", "dynasty": "唐", "sentences": ["孤山寺北贾亭西，水面初平云脚低。", "几处早莺争暖树，谁家新燕啄春泥。", "乱花渐欲迷人眼，浅草才能没马蹄。", "最爱湖东行不足，绿杨阴里白沙堤。"]},
     {"title": "赋得古原草送别", "author": "白居易", "dynasty": "唐", "sentences": ["离离原上草，一岁一枯荣。", "野火烧不尽，春风吹又生。", "远芳侵古道，晴翠接荒城。", "又送王孙去，萋萋满别情。"]},
-    {"title": "从军行七首·其四", "author": "王昌龄", "dynasty": "唐", "sentences": ["青海长云暗雪山，孤城遥望玉门关。", "黄沙百战穿金甲，不破楼兰终不还。"]},
+    {"title": "从军行七首·其四", "author": "王昌龄", "dynasty": "唐", "sentences": ["青海长云暗雪山，孤城遥望玉门关。", "黄沙百战穿金甲，不破楼兰终不还. 。"]},
     {"title": "出塞二首·其一", "author": "王昌龄", "dynasty": "唐", "sentences": ["秦时明月汉时关，万里长征人未还。", "单使龙城飞将在，不教胡马度阴山。"]},
-    {"title": "芙蓉楼送辛渐", "author": "王昌龄", "dynasty": "唐", "sentences": ["寒雨连江夜入吴，平明送客楚山孤。", "洛阳亲友如相问，一片冰心在玉壶。"]},
+    {"title": "芙蓉楼送辛渐", "author": "王昌龄", "dynasty": "唐", "sentences": ["寒雨连江夜入吴，平明送客楚山孤。", "洛阳亲友如相问，一片冰心在玉壶. 。"]},
     {"title": "鹿柴", "author": "王维", "dynasty": "唐", "sentences": ["空山不见人，但闻人语响。", "返景入深林，复照青苔上。"]},
     {"title": "竹里馆", "author": "王维", "dynasty": "唐", "sentences": ["独坐幽篁里，弹琴复长啸。", "深林人不知，明月来相照。"]},
     {"title": "静夜思", "author": "李白", "dynasty": "唐", "sentences": ["床前明月光，疑是地上霜。", "举头望明月，低头思故乡。"]},
@@ -58,44 +58,51 @@ POEM_POOL = [
 ]
 
 def get_complete_poem():
-    """主接口切换为开源优秀的 chinese-poetry-api，并叠加质检与防撞机制"""
     local_titles = {p["title"] for p in POEM_POOL}
     
+    # 🌟 冲锋 1：测试 chinese-poetry-api 接口
     try:
-        # 使用该开源项目的随机诗词分发端点（这里以最经典的唐诗为例，也可以换成宋诗/诗经等）
         url = "https://chinese-poetry-api.vercel.app/api/poetry/random?type=tang"
-        resp = requests.get(url, timeout=6)
-        
+        resp = requests.get(url, timeout=5)
         if resp.status_code == 200:
             data = resp.json()
-            # 该 API 返回的结构一般包含: title, author, paragraphs 等
             title = data.get("title", "无题").strip()
             author = data.get("author", "佚名").strip()
             paragraphs = data.get("paragraphs", [])
-            
-            # 清洗并过滤无效断行
             sentences = [s.strip() for s in paragraphs if s.strip()]
             
-            # 🛡️ 核心测试质检：
-            # 1. 必须是结构完整的全诗（句子数 >= 4）
-            # 2. 且不能和本地 50 首主打词库发生撞车
+            # 去重和句数质检 (必须是4/8句或以上，且名字完全不撞车)
             if len(sentences) >= 4 and title not in local_titles:
-                print(f"✨ 新接口测试完美通关！成功捕获全新古诗：《{title}》")
-                return {
-                    "title": title,
-                    "author": author,
-                    "dynasty": "唐", # 优先抽取的唐诗库
-                    "sentences": sentences
-                }
-            elif title in local_titles:
-                print(f"🛑 拦截：新接口返回了词库中已有的名篇《{title}》，放弃使用以保证去重新鲜度。")
+                print(f"✨ [主接口成功] 抓取到全新完整诗句：《{title}》")
+                return {"title": title, "author": author, "dynasty": "唐", "sentences": sentences}
             else:
-                print(f"⚠️ 拦截：新接口返回的诗句长短不合规（共 {len(sentences)} 句）。")
-                
+                print(f"🔄 [主接口拦截] 句数不足({len(sentences)}句) 或标题《{title}》已在词库中。")
     except Exception as e:
-        print(f"❌ chinese-poetry-api 请求或解析异常: {e}。不要慌，准备启动本地大词库摇号。")
+        print(f"⚠️ 主接口请求失败或超时: {e}，正在无缝切换备用接口...")
 
-    # 任何一步拦截或失败，即刻无缝启动本地 50 首词库摇号
+    # 🌟 冲锋 2：测试 今日诗词 接口
+    try:
+        url = "https://v2.jinrishici.com/one.json"
+        headers = {"X-User-Token": "v2.jinrishici.token"}
+        resp = requests.get(url, headers=headers, timeout=5)
+        if resp.status_code == 200 and resp.json().get("status") == "success":
+            origin = resp.json()["data"]["origin"]
+            title = origin.get("title", "无题").strip()
+            author = origin.get("author", "佚名")
+            dynasty = origin.get("dynasty", "唐")
+            content_list = origin.get("content", [])
+            sentences = [s.strip() for s in content_list if s.strip()]
+            
+            # 去重和句数质检
+            if len(sentences) >= 4 and title not in local_titles:
+                print(f"✨ [备用接口成功] 抓取到全新完整诗句：《{title}》")
+                return {"title": title, "author": author, "dynasty": dynasty, "sentences": sentences}
+            else:
+                print(f"🔄 [备用接口拦截] 句数不足({len(sentences)}句) 或标题《{title}》已在词库中。")
+    except Exception as e:
+        print(f"⚠️ 备用接口也请求失败: {e}")
+
+    # 🚨 终极兜底：当全部外部接口由于不可抗力不符合条件时，启用本地随机摇号
     print("🎲 外部接口未能提供符合标准的新诗，正在从本地大词库随机抽签...")
     return random.choice(POEM_POOL)
 
@@ -128,7 +135,7 @@ def send_poem_stream():
     print(f"✅ 瀑布流推送完成")
 
 if __name__ == "__main__":
-    print("🤖 chinese-poetry-api 核心驱动版 Bot 已启动...")
+    print("🤖 双重接口智能质检接力版 Bot 已启动...")
     send_poem_stream()  # 热启动测试
     
     last_pushed_date = ""
