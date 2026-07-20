@@ -3,6 +3,7 @@ from datetime import datetime
 import time
 import requests
 import random
+import re
 
 # 从 Railway 环境变量读取
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -57,66 +58,81 @@ POEM_POOL = [
     {"title": "江雪", "author": "柳宗元", "dynasty": "唐", "sentences": ["千山鸟飞绝，万径人踪灭。", "孤舟蓑笠翁，独钓寒江雪。"]}
 ]
 
+def split_to_sentences(text_list):
+    """智能将带有标点符号的长句子切割成单句瀑布流"""
+    sentences = []
+    for item in text_list:
+        # 用 ； 。 ！？ 等符号切割
+        parts = re.split(r'([。！？；])', item)
+        combined = ""
+        for part in parts:
+            combined += part
+            if part in ["。", "！", "？", "；"]:
+                if len(combined.strip()) > 2:
+                    sentences.append(combined.strip())
+                combined = ""
+        if combined.strip():
+            sentences.append(combined.strip())
+    return sentences
+
 def get_complete_poem():
     local_titles = {p["title"] for p in POEM_POOL}
-    debug_logs = []  # 记录所有调试日志，最后发送出来
+    debug_logs = []
     
-    # 🌟 尝试 1：使用极简古诗 API (api.vvhan.com)
-    try:
-        url = "https://api.vvhan.com/api/ian/shi"
-        resp = requests.get(url, timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get("success"):
-                info = data.get("data", {})
-                title = info.get("title", "无题").strip()
-                author = info.get("author", "佚名").strip()
-                dynasty = info.get("dynasty", "唐").strip()
-                content = info.get("content", "")
-                
-                # 按标点切分出每一句诗
-                raw_sentences = content.replace("！", "。").replace("？", "。").split("。")
-                sentences = [s.strip() + "。" for s in raw_sentences if s.strip()]
-                
-                if len(sentences) >= 4 and title not in local_titles:
-                    return {
-                        "title": title, "author": author, "dynasty": dynasty,
-                        "sentences": sentences, "source": "🌐 外部接口: 韩小韩Shi-API",
-                        "debug_info": "接口正常返回非词库诗句"
-                    }
-                else:
-                    debug_logs.append(f"接口1拦截: 句数({len(sentences)})未达4句 或 标题《{title}》撞车词库")
-            else:
-                debug_logs.append("接口1返回 success=False")
-        else:
-            debug_logs.append(f"接口1 HTTP 错误码: {resp.status_code}")
-    except Exception as e:
-        debug_logs.append(f"接口1 请求异常: {str(e)}")
-
-    # 🌟 尝试 2：官方今日诗词接口
+    # 🌟 尝试 1：今日诗词 (jinrishici) - 优化了强拆切割算法
     try:
         url = "https://v2.jinrishici.com/one.json"
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(url, timeout=6)
         if resp.status_code == 200 and resp.json().get("status") == "success":
             origin = resp.json()["data"]["origin"]
             title = origin.get("title", "无题").strip()
             author = origin.get("author", "佚名")
             dynasty = origin.get("dynasty", "唐")
             content_list = origin.get("content", [])
-            sentences = [s.strip() for s in content_list if s.strip()]
+            
+            # 使用更平滑的切分算法（拆分逗号和句号）
+            sentences = split_to_sentences(content_list)
             
             if len(sentences) >= 4 and title not in local_titles:
                 return {
                     "title": title, "author": author, "dynasty": dynasty,
                     "sentences": sentences, "source": "🌐 外部接口: 今日诗词 (jinrishici)",
-                    "debug_info": "接口正常返回非词库诗句"
+                    "debug_info": f"解析成功！已智能拆解为 {len(sentences)} 句"
                 }
             else:
-                debug_logs.append(f"接口2拦截: 句数({len(sentences)})未达4句 或 标题《{title}》撞车词库")
+                debug_logs.append(f"今日诗词拦截: 拆分后({len(sentences)}句) 或 《{title}》属于本地预置词库")
         else:
-            debug_logs.append(f"接口2返回状态不对")
+            debug_logs.append("今日诗词 HTTP 异常")
     except Exception as e:
-        debug_logs.append(f"接口2 请求异常: {str(e)}")
+        debug_logs.append(f"今日诗词异常: {str(e)}")
+
+    # 🌟 尝试 2：GitHub 国际开源 JSON 全量唐诗库 (托管在 jsDelivr 全球 CDN 上，Railway 直连绝不会报 DNS 错误)
+    try:
+        # 随机读取唐诗库的前 100 首全量数据文件
+        cdn_url = "https://cdn.jsdelivr.net/gh/chinese-poetry/chinese-poetry@master/全唐诗/poet.tang.0.json"
+        resp = requests.get(cdn_url, timeout=6)
+        if resp.status_code == 200:
+            poems_data = resp.json()
+            random.shuffle(poems_data) # 随机洗牌
+            
+            for item in poems_data:
+                title = item.get("title", "无题").strip()
+                author = item.get("author", "佚名").strip()
+                paragraphs = item.get("paragraphs", [])
+                sentences = split_to_sentences(paragraphs)
+                
+                # 寻找一首不在本地词库且符合 4 句以上的诗
+                if len(sentences) >= 4 and title not in local_titles:
+                    return {
+                        "title": title, "author": author, "dynasty": "唐",
+                        "sentences": sentences, "source": "🌐 全球 CDN 全唐诗开源库",
+                        "debug_info": f"抓取到非重复唐诗，共 {len(sentences)} 句"
+                    }
+            debug_logs.append("CDN 库中匹配未果")
+        else:
+            debug_logs.append(f"CDN 请求状态码: {resp.status_code}")
+    except Exception as e:
+        debug_logs.append(f"CDN 库请求异常: {str(e)}")
 
     # 🚨 终极兜底
     local_poem = random.choice(POEM_POOL)
@@ -156,7 +172,7 @@ def send_poem_stream():
         send_telegram_msg(sentence)
         time.sleep(2.0)
         
-    # 3. 🏁 结尾增加：详细的接口诊断与来源报幕
+    # 3. 🏁 结尾报幕
     source_msg = (
         f"🔍 **[数据来源调试]**\n"
         f"来源：`{poem['source']}`\n"
