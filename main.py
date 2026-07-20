@@ -59,34 +59,44 @@ POEM_POOL = [
 
 def get_complete_poem():
     local_titles = {p["title"] for p in POEM_POOL}
+    debug_logs = []  # 记录所有调试日志，最后发送出来
     
-    # 🌟 尝试 1：测试 chinese-poetry-api 接口
+    # 🌟 尝试 1：使用极简古诗 API (api.vvhan.com)
     try:
-        url = "https://chinese-poetry-api.vercel.app/api/poetry/random?type=tang"
+        url = "https://api.vvhan.com/api/ian/shi"
         resp = requests.get(url, timeout=5)
         if resp.status_code == 200:
             data = resp.json()
-            title = data.get("title", "无题").strip()
-            author = data.get("author", "佚名").strip()
-            paragraphs = data.get("paragraphs", [])
-            sentences = [s.strip() for s in paragraphs if s.strip()]
-            
-            if len(sentences) >= 4 and title not in local_titles:
-                return {
-                    "title": title, 
-                    "author": author, 
-                    "dynasty": "唐", 
-                    "sentences": sentences,
-                    "source": "🌐 外部接口: chinese-poetry-api"
-                }
+            if data.get("success"):
+                info = data.get("data", {})
+                title = info.get("title", "无题").strip()
+                author = info.get("author", "佚名").strip()
+                dynasty = info.get("dynasty", "唐").strip()
+                content = info.get("content", "")
+                
+                # 按标点切分出每一句诗
+                raw_sentences = content.replace("！", "。").replace("？", "。").split("。")
+                sentences = [s.strip() + "。" for s in raw_sentences if s.strip()]
+                
+                if len(sentences) >= 4 and title not in local_titles:
+                    return {
+                        "title": title, "author": author, "dynasty": dynasty,
+                        "sentences": sentences, "source": "🌐 外部接口: 韩小韩Shi-API",
+                        "debug_info": "接口正常返回非词库诗句"
+                    }
+                else:
+                    debug_logs.append(f"接口1拦截: 句数({len(sentences)})未达4句 或 标题《{title}》撞车词库")
+            else:
+                debug_logs.append("接口1返回 success=False")
+        else:
+            debug_logs.append(f"接口1 HTTP 错误码: {resp.status_code}")
     except Exception as e:
-        print(f"主接口请求失败: {e}")
+        debug_logs.append(f"接口1 请求异常: {str(e)}")
 
-    # 🌟 尝试 2：测试 今日诗词 接口
+    # 🌟 尝试 2：官方今日诗词接口
     try:
         url = "https://v2.jinrishici.com/one.json"
-        headers = {"X-User-Token": "v2.jinrishici.token"}
-        resp = requests.get(url, headers=headers, timeout=5)
+        resp = requests.get(url, timeout=5)
         if resp.status_code == 200 and resp.json().get("status") == "success":
             origin = resp.json()["data"]["origin"]
             title = origin.get("title", "无题").strip()
@@ -97,23 +107,26 @@ def get_complete_poem():
             
             if len(sentences) >= 4 and title not in local_titles:
                 return {
-                    "title": title, 
-                    "author": author, 
-                    "dynasty": dynasty, 
-                    "sentences": sentences,
-                    "source": "🌐 外部接口: 今日诗词 (jinrishici)"
+                    "title": title, "author": author, "dynasty": dynasty,
+                    "sentences": sentences, "source": "🌐 外部接口: 今日诗词 (jinrishici)",
+                    "debug_info": "接口正常返回非词库诗句"
                 }
+            else:
+                debug_logs.append(f"接口2拦截: 句数({len(sentences)})未达4句 或 标题《{title}》撞车词库")
+        else:
+            debug_logs.append(f"接口2返回状态不对")
     except Exception as e:
-        print(f"备用接口请求失败: {e}")
+        debug_logs.append(f"接口2 请求异常: {str(e)}")
 
-    # 🚨 终极兜底：启用本地离线词库
+    # 🚨 终极兜底
     local_poem = random.choice(POEM_POOL)
     return {
         "title": local_poem["title"],
         "author": local_poem["author"],
         "dynasty": local_poem["dynasty"],
         "sentences": local_poem["sentences"],
-        "source": "📦 本地 50 首精选词库 (兜底)"
+        "source": "📦 本地 50 首精选词库 (兜底)",
+        "debug_info": " | ".join(debug_logs)
     }
 
 def send_telegram_msg(text):
@@ -140,17 +153,18 @@ def send_poem_stream():
     
     # 2. 逐句推送诗文
     for sentence in poem['sentences']:
-        print(f"正在推送: {sentence}")
         send_telegram_msg(sentence)
         time.sleep(2.0)
         
-    # 3. 🏁 结尾增加：来源报幕消息
-    source_msg = f"🔍 **[数据来源调试]**\n本首诗词来自：`{poem['source']}`"
+    # 3. 🏁 结尾增加：详细的接口诊断与来源报幕
+    source_msg = (
+        f"🔍 **[数据来源调试]**\n"
+        f"来源：`{poem['source']}`\n"
+        f"诊断信息：`{poem['debug_info']}`"
+    )
     send_telegram_msg(source_msg)
-    print(f"✅ 瀑布流推送完成，来源：{poem['source']}")
 
 if __name__ == "__main__":
-    print("🤖 调试报幕版 Bot 已启动...")
     send_poem_stream()  # 热启动测试
     
     last_pushed_date = ""
