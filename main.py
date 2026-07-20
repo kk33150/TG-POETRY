@@ -59,10 +59,9 @@ POEM_POOL = [
 ]
 
 def split_to_sentences(text_list):
-    """智能将带有标点符号的长句子切割成单句瀑布流"""
+    """智能将带有标点符号的长句子切割成单句"""
     sentences = []
     for item in text_list:
-        # 用 ； 。 ！？ 等符号切割
         parts = re.split(r'([。！？；])', item)
         combined = ""
         for part in parts:
@@ -79,41 +78,39 @@ def get_complete_poem():
     local_titles = {p["title"] for p in POEM_POOL}
     debug_logs = []
     
-    # 🌟 尝试 1：今日诗词 (jinrishici) - 优化了强拆切割算法
-    try:
-        url = "https://v2.jinrishici.com/one.json"
-        resp = requests.get(url, timeout=6)
-        if resp.status_code == 200 and resp.json().get("status") == "success":
-            origin = resp.json()["data"]["origin"]
-            title = origin.get("title", "无题").strip()
-            author = origin.get("author", "佚名")
-            dynasty = origin.get("dynasty", "唐")
-            content_list = origin.get("content", [])
-            
-            # 使用更平滑的切分算法（拆分逗号和句号）
-            sentences = split_to_sentences(content_list)
-            
-            if len(sentences) >= 4 and title not in local_titles:
-                return {
-                    "title": title, "author": author, "dynasty": dynasty,
-                    "sentences": sentences, "source": "🌐 外部接口: 今日诗词 (jinrishici)",
-                    "debug_info": f"解析成功！已智能拆解为 {len(sentences)} 句"
-                }
-            else:
-                debug_logs.append(f"今日诗词拦截: 拆分后({len(sentences)}句) 或 《{title}》属于本地预置词库")
-        else:
-            debug_logs.append("今日诗词 HTTP 异常")
-    except Exception as e:
-        debug_logs.append(f"今日诗词异常: {str(e)}")
+    # 🌟 尝试 1：今日诗词 (jinrishici) - 多次循环直到抓到严格 4 句的绝句
+    for attempt in range(3):
+        try:
+            url = "https://v2.jinrishici.com/one.json"
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200 and resp.json().get("status") == "success":
+                origin = resp.json()["data"]["origin"]
+                title = origin.get("title", "无题").strip()
+                author = origin.get("author", "佚名")
+                dynasty = origin.get("dynasty", "唐")
+                content_list = origin.get("content", [])
+                
+                sentences = split_to_sentences(content_list)
+                
+                # 🎯 核心过滤逻辑：必须【恰好 4 句】且不在本地词库里
+                if len(sentences) == 4 and title not in local_titles:
+                    return {
+                        "title": title, "author": author, "dynasty": dynasty,
+                        "sentences": sentences, "source": "🌐 外部接口: 今日诗词 (jinrishici)",
+                        "debug_info": "成功匹配到 4 句绝句！"
+                    }
+                else:
+                    debug_logs.append(f"今日诗词(第{attempt+1}次)过滤: 句数({len(sentences)})非4句 或 撞车词库")
+        except Exception as e:
+            debug_logs.append(f"今日诗词异常: {str(e)}")
 
-    # 🌟 尝试 2：GitHub 国际开源 JSON 全量唐诗库 (托管在 jsDelivr 全球 CDN 上，Railway 直连绝不会报 DNS 错误)
+    # 🌟 尝试 2：CDN 开源全唐诗库 - 从上百首中严格寻找 4 句绝句
     try:
-        # 随机读取唐诗库的前 100 首全量数据文件
         cdn_url = "https://cdn.jsdelivr.net/gh/chinese-poetry/chinese-poetry@master/全唐诗/poet.tang.0.json"
         resp = requests.get(cdn_url, timeout=6)
         if resp.status_code == 200:
             poems_data = resp.json()
-            random.shuffle(poems_data) # 随机洗牌
+            random.shuffle(poems_data)
             
             for item in poems_data:
                 title = item.get("title", "无题").strip()
@@ -121,21 +118,20 @@ def get_complete_poem():
                 paragraphs = item.get("paragraphs", [])
                 sentences = split_to_sentences(paragraphs)
                 
-                # 寻找一首不在本地词库且符合 4 句以上的诗
-                if len(sentences) >= 4 and title not in local_titles:
+                # 🎯 核心过滤逻辑：必须【恰好 4 句】
+                if len(sentences) == 4 and title not in local_titles:
                     return {
                         "title": title, "author": author, "dynasty": "唐",
                         "sentences": sentences, "source": "🌐 全球 CDN 全唐诗开源库",
-                        "debug_info": f"抓取到非重复唐诗，共 {len(sentences)} 句"
+                        "debug_info": "成功过滤并挑选出 4 句唐诗"
                     }
-            debug_logs.append("CDN 库中匹配未果")
-        else:
-            debug_logs.append(f"CDN 请求状态码: {resp.status_code}")
+            debug_logs.append("CDN 库未找到合适 4 句诗")
     except Exception as e:
         debug_logs.append(f"CDN 库请求异常: {str(e)}")
 
-    # 🚨 终极兜底
-    local_poem = random.choice(POEM_POOL)
+    # 🚨 终极兜底：本地词库里找一首 4 句的
+    four_sentence_locals = [p for p in POEM_POOL if len(p["sentences"]) == 4]
+    local_poem = random.choice(four_sentence_locals)
     return {
         "title": local_poem["title"],
         "author": local_poem["author"],
@@ -167,7 +163,7 @@ def send_poem_stream():
     send_telegram_msg(intro_msg)
     time.sleep(2.0)
     
-    # 2. 逐句推送诗文
+    # 2. 逐句推送诗文（只有 4 句）
     for sentence in poem['sentences']:
         send_telegram_msg(sentence)
         time.sleep(2.0)
